@@ -1,0 +1,273 @@
+from app import app, db
+from app.models import models
+from app.routes import auth, main
+
+app.register_blueprint(auth.auth)
+app.register_blueprint(main.main)
+
+if __name__ == '__main__':
+    db.create_all()
+    app.run(debug=True)
+
+
+
+import os
+
+class Config:
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'a_hard_to_guess_string'
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///leetcode_tracker.db'
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+
+web: gunicorn app:app
+
+
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+from .config import Config
+
+app = Flask(__name__)
+app.config.from_object(Config)
+
+db = SQLAlchemy(app)
+
+from .routes import auth, main
+
+
+from flask import Flask, jsonify
+from . import db  # Import your database setup from __init__.py
+from .models.models import UserProgress  # Import your UserProgress model
+
+app = Flask(__name__)
+
+@app.route('/api/user_progress/<int:user_id>')
+def user_progress(user_id):
+    # Example function call to get user progress data from the database
+    progress_data = get_user_progress(user_id)
+    
+    # Convert progress_data to JSON and return
+    return jsonify(progress_data)
+
+def get_user_progress(user_id):
+    # Placeholder for fetching user progress data from your database
+    # This is where you would query your UserProgress model
+    # For now, returning a mock response
+    return {
+        "user_id": user_id,
+        "progress": [
+            {"problem_id": 1, "success": True, "time_spent": 120, "attempts": 1},
+            {"problem_id": 2, "success": False, "time_spent": 300, "attempts": 3}
+        ]
+    }
+
+
+from .. import db
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password = db.Column(db.String(80), nullable=False)
+    # Additional fields as necessary
+
+class LeetCodeProblem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100), nullable=False)
+    difficulty = db.Column(db.String(10), nullable=False)
+    # Additional fields
+
+class Attempt(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    problem_id = db.Column(db.Integer, db.ForeignKey('leet_code_problem.id'), nullable=False)
+    success = db.Column(db.Boolean, nullable=False)
+    time_spent = db.Column(db.Integer, nullable=False)  # Time in seconds
+    user_difficulty_rating = db.Column(db.Integer, nullable=False)
+    # Timestamps, etc.
+
+
+
+
+body, html {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+header {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 20px 10%;
+    text-shadow: 1px 1px 4px rgba(0,0,0,0.2);
+}
+
+h1 {
+    margin: 0;
+}
+
+main {
+    padding: 20px 10%;
+}
+
+#progress-overview {
+    background: #f9f9f9;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 20px;
+    border-radius: 8px;
+}
+
+
+document.addEventListener("DOMContentLoaded", () => {
+    // Example: Add event listeners or interactivity here
+    const loginForm = document.getElementById("login-form");
+    if (loginForm) {
+        loginForm.addEventListener("submit", (e) => {
+            // Perform input validation or preprocessing here
+        });
+    }
+
+    // Similarly for other forms or interactive elements
+});
+document.addEventListener("DOMContentLoaded", function() {
+    loadUserProgress();
+
+    function loadUserProgress() {
+        // Assuming user_id is available
+        const userId = 1; // Example user ID
+        fetch(`/api/user_progress/${userId}`)
+            .then(response => response.json())
+            .then(data => {
+                console.log(data); // Log data or use it to update the DOM
+                // Update the DOM with user progress data
+            })
+            .catch(error => console.error('Error fetching user progress:', error));
+    }
+});
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode Tracker</title>
+    <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+    <header>
+        <h1>LeetCode Progress Tracker</h1>
+    </header>
+    <main>
+        <section id="progress-overview">
+            <!-- Dynamic content will be loaded here -->
+        </section>
+    </main>
+    <script src="static/js/script.js"></script>
+</body>
+</html>
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="{{ url_for('static', filename='js/script.js') }}" defer></script>
+</head>
+<body>
+    <header>
+        <!-- Navigation Bar -->
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('main.index') }}">Home</a></li>
+                <li><a href="{{ url_for('auth.login') }}">Login</a></li>
+                <li><a href="{{ url_for('auth.signup') }}">Register</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <footer>
+        <!-- Footer Content -->
+        <p>LeetCode Tracker © 2024</p>
+    </footer>
+</body>
+</html>
+
+
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="register-container">
+    <h2>Register</h2>
+    <form id="register-form" action="{{ url_for('auth.signup_post') }}" method="post">
+        <input type="text" name="username" placeholder="Username" required>
+        <input type="email" name="email" placeholder="Email" required>
+        <input type="password" name="password" placeholder="Password" required>
+        <button type="submit">Register</button>
+    </form>
+</div>
+{% endblock %}
+
+
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="login-container">
+    <h2>Login</h2>
+    <form id="login-form" action="{{ url_for('auth.login_post') }}" method="post">
+        <input type="text" name="username" placeholder="Username" required>
+        <input type="password" name="password" placeholder="Password" required>
+        <button type="submit">Login</button>
+    </form>
+</div>
+{% endblock %}
+
+
+from flask import Blueprint, render_template, redirect, url_for, request, flash
+from werkzeug.security import generate_password_hash, check_password_hash
+from .. import db
+from ..models.models import User
+
+auth = Blueprint('auth', __name__)
+
+@auth.route('/login')
+def login():
+    return render_template('login.html')
+
+@auth.route('/login', methods=['POST'])
+def login_post():
+    # Logic for login verification
+    return redirect(url_for('main.index'))
+
+@auth.route('/signup')
+def signup():
+    return render_template('register.html')
+
+@auth.route('/signup', methods=['POST'])
+def signup_post():
+    # Logic for registering a new user
+    return redirect(url_for('auth.login'))
+
+@auth.route('/logout')
+def logout():
+    # Logic for logging out
+    return redirect(url_for('main.index'))
+
+
+
+
+from flask import Blueprint, render_template
+
+main = Blueprint('main', __name__)
+
+@main.route('/')
+def index():
+    return render_template('index.html')
+
+
